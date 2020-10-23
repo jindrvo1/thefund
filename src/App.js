@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { BrowserRouter, Switch, Route } from "react-router-dom";
 import './App.css';
 import style from './style.module.css';
 
@@ -24,14 +23,8 @@ export default class App extends Component {
       <div className="App">
         <header className="App-header">
           <h1 className={ style.loadingHeader }>The Fucking Fund</h1>
-          <BrowserRouter>
-            <Switch>
-              <Route path="/">
-                { this.state.loading ? <Loader /> : '' }
-                <Home loadingCallback={ this._handleLoading } />
-              </Route>
-            </Switch>
-          </BrowserRouter>
+          { this.state.loading ? <Loader /> : '' }
+          <Home loadingCallback={ this._handleLoading } />
         </header>
       </div>
     );
