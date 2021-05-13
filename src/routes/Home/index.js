@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import Papa from 'papaparse';
 import yahooFinance from 'yahoo-finance';
 import Plot from 'react-plotly.js';
-import { Tabs, Tab } from '@material-ui/core'
+import { Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@material-ui/core'
 import { withStyles } from '@material-ui/core/styles';
 import style from './style.module.css';
 
@@ -19,7 +19,8 @@ export default class Home extends Component {
 					'L': 'LN'
 				},
 				loading: true,
-				currentPlotTab: 0
+				currentPlotTab: 0,
+				currentTableTab: 0,
 			}
 		}
 
@@ -218,7 +219,7 @@ export default class Home extends Component {
 		 */
 		_getExchangeRates = () => {
 			return new Promise(resolve => {
-				fetch(`https://api.exchangeratesapi.io/latest?base=EUR`)
+				fetch(`https://api.exchangerate.host/latest?base=EUR`)
 					.then(res => res.json())
 					.then(exch => {
 						resolve(exch.rates);
@@ -231,7 +232,7 @@ export default class Home extends Component {
 			dateTo = dateTo.toISOString().substring(0, 10);
 
 			return new Promise(resolve => {
-				fetch(`https://api.exchangeratesapi.io/history?start_at=${dateFrom}&end_at=${dateTo}`)
+				fetch(`https://api.exchangerate.host/timeseries?start_date=${dateFrom}&end_date=${dateTo}&base=EUR`)
 					.then(res => res.json())
 					.then(exch => {
 						resolve(exch.rates);
@@ -338,6 +339,7 @@ export default class Home extends Component {
 
 			let res = [];
 			let exchRates = await this._getExchangeRatesFromTo(date, new Date());
+
 			let currDate = date;
 			let today = new Date();
 
@@ -356,6 +358,7 @@ export default class Home extends Component {
 					if (rel.length > 0) {
 						let fees = rel.map(p => p.Fees).reduce((a, b) => a + b);
 						rel = rel[0];
+
 						let relExchRate = exchRates[currDateStr];
 						let closestDate = currDate;
 						while (relExchRate === undefined) {
@@ -473,8 +476,6 @@ export default class Home extends Component {
 												transactions.filter(t => t.Amount > 0).map(t => 1/t.ExchangeRate*t.PricePerShare*t.Amount),
 												transactions.filter(t => t.Amount > 0).map(t => t.Amount)
 											)
-
-			console.log(boughtFor);
 		}
 
 		_getDateRange = (start, end, step) => {
@@ -591,7 +592,9 @@ export default class Home extends Component {
 			let transLive = await this._assignLivePrices(transactions)
 			let exchangeRates = await this._getExchangeRates();
 			let livePrice = this._calcCurrentWorth(transLive, exchangeRates, vault);
-
+			let currentStocks = this._calcStockPerformance(transLive, exchangeRates);
+			let investorPerformance = this._calcInvestorPerformance(transLive, exchangeRates, deposits);
+			console.log(investorPerformance);
 			let loading = false;
 			this.props.loadingCallback(loading);
 			this.setState({
@@ -601,8 +604,71 @@ export default class Home extends Component {
 				loading,
 				deposits: depositsFilled,
 				dailyProgress,
-				livePrice
+				livePrice,
+				currentStocks,
+				investorPerformance
 			});
+		}
+
+		_calcInvestorPerformance = (transactions, exchangeRates, deposits) => {
+			let investors = [...new Set(transactions.map(t => t.Investor))];
+			investors = investors.reduce((acc,curr)=> (acc[curr] = 0, acc),{});
+
+			for (let [k, v] of Object.entries(investors)) {
+				let investorWorth = transactions
+					.filter(t => t.Investor === k)
+					.map(t => t.TotalPriceEUR)
+					.reduce((a, b) => a + b, 0);
+				let investorDeposit = deposits
+					.filter(t => t.Member === k)
+					.map(t => t.Amount)
+					.reduce((a, b) => a + b, 0);
+
+				investors[k] = {
+					name: k,
+					worth: investorWorth,
+					deposit: investorDeposit
+				}
+			}
+
+			transactions = transactions
+				.filter(t => !this._checkIfTickerSold(t, transactions));
+
+			let amounts = {};
+			for (let i = 0; i < transactions.length; i++) {
+				let t = transactions[i];
+
+				amounts[t.Ticker] = t.Ticker in amounts ? amounts[t.Ticker] + t.Amount : t.Amount;
+
+				if (amounts[t.Ticker] === 0) {
+					for (let j = 0; j <= i; j++) {
+						if (transactions[j].Ticker === t.Ticker) {
+							delete transactions[j];
+						}
+					}
+				}
+			}
+
+			transactions = transactions.filter(Boolean);
+
+			transactions = transactions
+				.map(t => {
+					let price = t.LivePrice*t.Amount/exchangeRates[t.Currency];
+					price /= t.Currency === 'GBP' ? 100 : 1;
+					return {
+						...t,
+						currentValue: price
+					}
+				});
+
+			for (let [k, v] of Object.entries(investors)) {
+				investors[k].worth += transactions
+					.filter(t => t.Investor === k)
+					.map(t => t.currentValue)
+					.reduce((a, b) => a + b, 0);
+			}
+
+			return investors;
 		}
 
 		_calcCurrentWorth = (transactions, exchRates, vault) => {
@@ -610,7 +676,7 @@ export default class Home extends Component {
 				.map(t => t.Fees)
 				.reduce((a, b) => a + b, 0);
 
-			transactions =  transactions
+			transactions = transactions
 				.filter(t => !this._checkIfTickerSold(t, transactions));
 
 			let nav = transactions
@@ -622,6 +688,40 @@ export default class Home extends Component {
 				.reduce((a, b) => a + b, 0)
 				+ vault.sort((a, b) => b.Date - a.Date)[0].Amount
 				+ fees;
+
+			return nav;
+		}
+
+		_calcStockPerformance = (transactions, exchRates) => {
+			transactions = transactions
+				.filter(t => !this._checkIfTickerSold(t, transactions));
+
+			let amounts = {};
+			for (let i = 0; i < transactions.length; i++) {
+				let t = transactions[i];
+
+				amounts[t.Ticker] = t.Ticker in amounts ? amounts[t.Ticker] + t.Amount : t.Amount;
+
+				if (amounts[t.Ticker] === 0) {
+					for (let j = 0; j <= i; j++) {
+						if (transactions[j].Ticker === t.Ticker) {
+							delete transactions[j];
+						}
+					}
+				}
+			}
+
+			transactions = transactions.filter(Boolean);
+
+			let nav = transactions
+				.map(t => {
+					let price = t.LivePrice*t.Amount/exchRates[t.Currency];
+					price /= t.Currency === 'GBP' ? 100 : 1;
+					return {
+						...t,
+						currentValue: price
+					}
+				});
 
 			return nav;
 		}
@@ -754,9 +854,9 @@ export default class Home extends Component {
 		_renderPlot = () => {
 			let plot = this.state.currentPlotTab;
 			if (plot === 0)
-				return this._getDailyProgressPlot()
-			else if (plot === 1)
 				return this._getOverallPlot()
+			else if (plot === 1)
+				return this._getDailyProgressPlot()
 
 			return 0;
 		}
@@ -766,6 +866,112 @@ export default class Home extends Component {
 					backgroundColor: '#61DBFB',
 			}
 		})(Tabs);
+
+		_handleTableChange = (_, ind) => {
+			this.setState({ currentTableTab: ind });
+		}
+
+		_renderTable = () => {
+			let table = this.state.currentTableTab;
+			if (table === 0)
+				return this._getStockTable()
+			else if (table === 1)
+				return this._getInvestorTable()
+
+			return 0;
+		}
+
+		_getStockTable = () => {
+			return (
+				<TableContainer className={style.mainTable}>
+					<Table aria-label="simple table">
+						<TableHead>
+							<TableRow>
+								<TableCell className={style.mainTableCell}>Ticker</TableCell>
+								<TableCell className={style.mainTableCell}>Bought at</TableCell>
+								<TableCell className={style.mainTableCell}>Current price</TableCell>
+								<TableCell className={style.mainTableCell}>Profit</TableCell>
+								<TableCell className={style.mainTableCell}>Profit %</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>
+							{
+								this.state.currentStocks
+									.sort((a, b) =>
+										(((-b.TotalPriceEUR-b.currentValue)/b.TotalPriceEUR)) -
+										(((-a.TotalPriceEUR-a.currentValue)/a.TotalPriceEUR))
+									)
+									.map(s => (
+									<TableRow key={s.Ticker}>
+										<TableCell>
+											{ s.Ticker }
+										</TableCell>
+										<TableCell>
+											€{ -s.TotalPriceEUR.toFixed(2) }
+										</TableCell>
+										<TableCell>
+											€{ s.currentValue.toFixed(2) }
+										</TableCell>
+										<TableCell>
+											€{ (s.TotalPriceEUR+s.currentValue).toFixed(2) }
+										</TableCell>
+										<TableCell>
+											{ (100*(((s.TotalPriceEUR+s.currentValue)/(-s.TotalPriceEUR)))).toFixed(2) }%
+										</TableCell>
+									</TableRow>
+								))
+							}
+						</TableBody>
+					</Table>
+				</TableContainer>
+			);
+		}
+
+		_getInvestorTable = () => {
+			return (
+				<TableContainer className={style.mainTable}>
+					<Table aria-label="simple table">
+						<TableHead>
+							<TableRow>
+								<TableCell className={style.mainTableCell}>Investor</TableCell>
+								<TableCell className={style.mainTableCell}>Current worth</TableCell>
+								<TableCell className={style.mainTableCell}>Deposited</TableCell>
+								<TableCell className={style.mainTableCell}>Profit</TableCell>
+								<TableCell className={style.mainTableCell}>Profit %</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>
+							{
+								Object.values(this.state.investorPerformance)
+									.sort((a, b) =>
+										(((b.deposit+b.worth)/b.deposit)) -
+										(((a.deposit+a.worth)/a.deposit))
+									)
+									.map(i => (
+									<TableRow key={i.name}>
+										<TableCell>
+											{ i.name }
+										</TableCell>
+										<TableCell>
+											€{ (i.worth+i.deposit).toFixed(2) }
+										</TableCell>
+										<TableCell>
+											€{ i.deposit.toFixed(2) }
+										</TableCell>
+										<TableCell>
+											€{ (i.worth).toFixed(2) }
+										</TableCell>
+										<TableCell>
+											{ (100*((i.worth+i.deposit)/i.deposit)-100).toFixed(2) }%
+										</TableCell>
+									</TableRow>
+								))
+							}
+						</TableBody>
+					</Table>
+				</TableContainer>
+			);
+		}
 
 		render() {
 			return (
@@ -784,9 +990,16 @@ export default class Home extends Component {
 									.toFixed(2)
 							}%.
 						</div>
-						<this._styledTabs value={this.state.currentPlotTab} onChange={this._handlePlotChange} centered>
-							<Tab label="Today's performance" />
+
+						<this._styledTabs value={this.state.currentTableTab} onChange={this._handleTableChange} centered>
+							<Tab label="Stock performance" />
+							<Tab label="Investor performance" />
+						</this._styledTabs>
+						{ this._renderTable() }
+
+						<this._styledTabs value={this.state.currentPlotTab} onChange={this._handlePlotChange} centered className={style.plotTabs}>
 							<Tab label="Overall performance" />
+							<Tab label="Today's performance" />
 						</this._styledTabs>
 						{ this._renderPlot() }
 					</div>

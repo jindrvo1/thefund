@@ -2,3 +2,25 @@
 	margin: 10px 0 40px 0;
 	font-size: 16px;
 }
+
+.mainTable {
+	background-color: #282c34;
+}
+
+.mainTable td {
+	border-bottom: 1px solid #61DBFB;
+	color: #61DBFB;
+}
+
+.mainTable th {
+	border-bottom: 2px solid #61DBFB;
+	color: #61DBFB;
+}
+
+.mainTable tr:last-child td {
+	border-bottom: none;
+}
+
+.plotTabs {
+	margin-top: 50px;
+}
