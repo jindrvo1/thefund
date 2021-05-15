@@ -185,14 +185,10 @@ export default class Home extends Component {
 		 * @returns {Promise<int>} - A promise which is resolved when the stock price is retrieved.
 		 * @private
 		 */
-		_getStock = ticker => {
-			return new Promise(resolve  => {
-				yahooFinance.quote({
-					symbol: ticker
-				}, (err, quote) => {
-					resolve(quote.price.regularMarketPrice);
-				})
-			})
+		_getStock = async (ticker) => {
+			return await fetch(`http://localhost:3000/api/yf/quote/${ticker}`)
+				.then(res => res.json())
+				.then(quote => quote.price.regularMarketPrice);
 		}
 
 		/**
@@ -201,8 +197,8 @@ export default class Home extends Component {
 		 * @returns {Promise<[Object]>} - A promise which is resolved when all stocks are retrieved and assigned.
 		 * @private
 		 */
-		_assignLivePrices = data => {
-			let promises = data.map((item, i) => {
+		_assignLivePrices = (data) => {
+			let promises = data.map(async (item, i) => {
 				return this._getStock(item.Ticker).then(price => {
 					data[i].LivePrice = price;
 					return data[i];
@@ -217,27 +213,19 @@ export default class Home extends Component {
 		 * @returns {Object} - Object holding exchange rates of all available currencies and EUR.
 		 * @private
 		 */
-		_getExchangeRates = () => {
-			return new Promise(resolve => {
-				fetch(`https://api.exchangerate.host/latest?base=EUR`)
-					.then(res => res.json())
-					.then(exch => {
-						resolve(exch.rates);
-					})
-			})
+		_getExchangeRates =  async () => {
+			return await fetch(`http://localhost:3000/api/exchrates/latest`)
+				.then(res => res.json())
+				.then(exch => exch.rates);
 		}
 
-		_getExchangeRatesFromTo = (dateFrom, dateTo) => {
+		_getExchangeRatesFromTo = async (dateFrom, dateTo) => {
 			dateFrom = dateFrom.toISOString().substring(0, 10);
 			dateTo = dateTo.toISOString().substring(0, 10);
 
-			return new Promise(resolve => {
-				fetch(`https://api.exchangerate.host/timeseries?start_date=${dateFrom}&end_date=${dateTo}&base=EUR`)
-					.then(res => res.json())
-					.then(exch => {
-						resolve(exch.rates);
-					})
-			})
+			return await fetch(`http://localhost:3000/api/exchrates/timeseries/${dateFrom}/${dateTo}`)
+				.then(res => res.json())
+				.then(exch => exch.rates);
 		}
 
 		_convertDates = data => {
@@ -292,16 +280,9 @@ export default class Home extends Component {
 			return res;
 		}
 
-		_getStockAtDate = (ticker, date) => {
-			return new Promise(resolve  => {
-				yahooFinance.historical({
-					symbol: ticker,
-					from: date,
-					to: new Date()
-				}, (err, quotes) => {
-					resolve(quotes);
-				})
-			})
+		_getStockAtDate = async (ticker, date) => {
+			return await fetch(`http://localhost:3000/api/yf/historical/${ticker}/${date.toISOString().substring(0, 10)}`)
+				.then(res => res.json());
 		}
 
 		_getStocksAtDate = (data, date) => {
@@ -324,7 +305,7 @@ export default class Home extends Component {
 
 			prices = prices
 				.map(t => ({...t, price: t.price
-					.map(p => ({...p, date: new Date(p.date.setHours(0,0,0))}))
+					.map(p => ({...p, date: new Date(p.date)}))
 				})
 			);
 
@@ -449,16 +430,14 @@ export default class Home extends Component {
 			return this.state.bloombergId[id];
 		}
 
-		_getStockBloomberg = ticker => {
+		_getStockBloomberg = async (ticker) => {
 			let parts = ticker.split(".");
 			let stock = parts[0];
 			let stockExchange = parts.length > 1 ? this._translateBloombergId(parts[1]) : "US";
 
-			return fetch(
-				`https://www.bloomberg.com/markets/api/bulk-time-series/price/${stock}%3A${stockExchange}?timeFrame=1_DAY`
-			)
-			.then(response => response.json())
-			.then(data => data[0]);
+			return await fetch(`http://localhost:3000/api/bloomberg/timeseries/${stockExchange}/${stock}`)
+				.then(res => res.json())
+				.then(data => data[0]);
 		}
 
 		_getStocksBloomberg = data => {
@@ -527,6 +506,7 @@ export default class Home extends Component {
 
 			// Fetch today's exchange rates
 			let exchangeRates = await this._getExchangeRates();
+
 			let base = vaultWorth + feesWorth;
 
 			let res = [];
@@ -594,7 +574,7 @@ export default class Home extends Component {
 			let livePrice = this._calcCurrentWorth(transLive, exchangeRates, vault);
 			let currentStocks = this._calcStockPerformance(transLive, exchangeRates);
 			let investorPerformance = this._calcInvestorPerformance(transLive, exchangeRates, deposits);
-			console.log(investorPerformance);
+
 			let loading = false;
 			this.props.loadingCallback(loading);
 			this.setState({
