@@ -57,7 +57,13 @@ app.get('/api/bloomberg/timeseries/:exchange/:stock', async (req, res) => {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'
           }
         }
-      ).then(res=>res.json())
+      ).then(res=> {
+        if (res.ok) {
+          res.json()
+        } else {
+          console.log(res);
+        }
+      })
   )
 })
 
