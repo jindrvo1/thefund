@@ -23,9 +23,9 @@
     "yahoo-finance": "^0.3.7"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "npm run build && node server.js",
     "build": "react-scripts build",
-    "heroku-postbuild": "npm install && npm run build && node server.js && serve -s build",
+    "heroku-postbuild": "",
     "test": "react-scripts test",
     "serve": "node server.js",
     "eject": "react-scripts eject"
