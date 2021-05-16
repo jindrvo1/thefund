@@ -186,7 +186,7 @@ export default class Home extends Component {
 		 * @private
 		 */
 		_getStock = async (ticker) => {
-			return await fetch(`http://localhost:3000/api/yf/quote/${ticker}`)
+			return await fetch(`/api/yf/quote/${ticker}`)
 				.then(res => res.json())
 				.then(quote => quote.price.regularMarketPrice);
 		}
@@ -214,7 +214,7 @@ export default class Home extends Component {
 		 * @private
 		 */
 		_getExchangeRates =  async () => {
-			return await fetch(`http://localhost:3000/api/exchrates/latest`)
+			return await fetch(`/api/exchrates/latest`)
 				.then(res => res.json())
 				.then(exch => exch.rates);
 		}
@@ -223,7 +223,7 @@ export default class Home extends Component {
 			dateFrom = dateFrom.toISOString().substring(0, 10);
 			dateTo = dateTo.toISOString().substring(0, 10);
 
-			return await fetch(`http://localhost:3000/api/exchrates/timeseries/${dateFrom}/${dateTo}`)
+			return await fetch(`/api/exchrates/timeseries/${dateFrom}/${dateTo}`)
 				.then(res => res.json())
 				.then(exch => exch.rates);
 		}
@@ -281,7 +281,7 @@ export default class Home extends Component {
 		}
 
 		_getStockAtDate = async (ticker, date) => {
-			return await fetch(`http://localhost:3000/api/yf/historical/${ticker}/${date.toISOString().substring(0, 10)}`)
+			return await fetch(`/api/yf/historical/${ticker}/${date.toISOString().substring(0, 10)}`)
 				.then(res => res.json());
 		}
 
@@ -435,7 +435,7 @@ export default class Home extends Component {
 			let stock = parts[0];
 			let stockExchange = parts.length > 1 ? this._translateBloombergId(parts[1]) : "US";
 
-			return await fetch(`http://localhost:3000/api/bloomberg/timeseries/${stockExchange}/${stock}`)
+			return await fetch(`/api/bloomberg/timeseries/${stockExchange}/${stock}`)
 				.then(res => res.json())
 				.then(data => data[0]);
 		}
