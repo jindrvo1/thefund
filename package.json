@@ -23,7 +23,7 @@
     "yahoo-finance": "^0.3.7"
   },
   "scripts": {
-    "start": "npm run build && node server.js",
+    "start": "node server.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "serve": "node server.js",
