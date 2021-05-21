@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import Papa from 'papaparse';
-import yahooFinance from 'yahoo-finance';
 import Plot from 'react-plotly.js';
 import { Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@material-ui/core'
 import { withStyles } from '@material-ui/core/styles';

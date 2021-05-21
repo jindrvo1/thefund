@@ -48,7 +48,7 @@ app.get('/api/exchrates/timeseries/:start_date/:end_date', async (req, res) => {
 
 app.get('/api/bloomberg/timeseries/:exchange/:stock', async (req, res) => {
   let base = "https://www.bloomberg.com/markets/api";
-
+  console.log(`${base}/bulk-time-series/price/${req.params.stock}:${req.params.exchange}?timeFrame=1_DAY`);
   return res.send(
       await fetch(
         `${base}/bulk-time-series/price/${req.params.stock}:${req.params.exchange}?timeFrame=1_DAY`,
@@ -57,14 +57,8 @@ app.get('/api/bloomberg/timeseries/:exchange/:stock', async (req, res) => {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36'
           }
         }
-      ).then(res=> {
-        if (res.ok) {
-          res.json()
-        } else {
-          console.log(res);
-        }
-      })
-  )
+      ).then(res=> res.json())
+    )
 })
 
 app.listen(port, () => {
