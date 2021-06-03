@@ -566,7 +566,7 @@ export default class Home extends Component {
 			let prices = await this._calcWorthAtDates(uniqueDates[0], transactions, vault);
 			let worth = this._calcWorth(prices, depositsFilled);
 
-			let dailyProgress = await this._calcDailyProgress(transactions, vault);
+			// let dailyProgress = await this._calcDailyProgress(transactions, vault);
 
 			let transLive = await this._assignLivePrices(transactions)
 			let exchangeRates = await this._getExchangeRates();
@@ -582,7 +582,7 @@ export default class Home extends Component {
 				vault,
 				loading,
 				deposits: depositsFilled,
-				dailyProgress,
+				// dailyProgress,
 				livePrice,
 				currentStocks,
 				investorPerformance
@@ -831,6 +831,7 @@ export default class Home extends Component {
 		}
 
 		_renderPlot = () => {
+			return this._getOverallPlot()
 			let plot = this.state.currentPlotTab;
 			if (plot === 0)
 				return this._getOverallPlot()
@@ -978,7 +979,6 @@ export default class Home extends Component {
 
 						<this._styledTabs value={this.state.currentPlotTab} onChange={this._handlePlotChange} centered className={style.plotTabs}>
 							<Tab label="Overall performance" />
-							<Tab label="Today's performance" />
 						</this._styledTabs>
 						{ this._renderPlot() }
 					</div>

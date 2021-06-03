@@ -48,7 +48,7 @@ app.get('/api/exchrates/timeseries/:start_date/:end_date', async (req, res) => {
 
 app.get('/api/bloomberg/timeseries/:exchange/:stock', async (req, res) => {
   let base = "https://www.bloomberg.com/markets/api";
-  console.log(`${base}/bulk-time-series/price/${req.params.stock}:${req.params.exchange}?timeFrame=1_DAY`);
+
   return res.send(
       await fetch(
         `${base}/bulk-time-series/price/${req.params.stock}:${req.params.exchange}?timeFrame=1_DAY`,
