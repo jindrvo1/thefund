@@ -15,7 +15,8 @@ export default class Home extends Component {
 					vault: 'vault.csv'
 				},
 				bloombergId: {
-					'L': 'LN'
+					'L': 'LN',
+					'F': 'GR'
 				},
 				loading: true,
 				currentPlotTab: 0,
@@ -564,6 +565,7 @@ export default class Home extends Component {
 			let depositsFilled = this._fillDeposits(uniqueDates[0], deposits);
 
 			let prices = await this._calcWorthAtDates(uniqueDates[0], transactions, vault);
+
 			let worth = this._calcWorth(prices, depositsFilled);
 
 			// let dailyProgress = await this._calcDailyProgress(transactions, vault);
