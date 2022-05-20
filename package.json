@@ -20,9 +20,10 @@
     "react-spinners": "^0.9.0",
     "react-toastify": "^6.0.9",
     "serve": "^11.3.2",
-    "yahoo-finance": "^0.3.7"
+    "yahoo-finance2": "^2.3.3"
   },
   "scripts": {
+    "dev": "react-scripts start",
     "start": "node server.js",
     "build": "react-scripts build",
     "test": "react-scripts test",

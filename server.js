@@ -1,5 +1,5 @@
 //import yahooFinance from 'yahoo-finance';
-var yahooFinance = require('yahoo-finance');
+var yahooFinance = require('yahoo-finance2').default;
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -12,20 +12,18 @@ app.use(express.static(path.join(__dirname, 'build')));
 
 app.get('/api/yf/quote/:ticker', async (req, res) => {
   return res.send(
-      await yahooFinance.quote({
-        symbol: req.params.ticker
-      }
-    )
+      await yahooFinance.quoteSummary(req.params.ticker)
   )
 })
 
 app.get('/api/yf/historical/:ticker/:from', async (req, res) => {
   return res.send(
-      await yahooFinance.historical({
-        symbol: req.params.ticker,
-        from: req.params.from,
-        to: new Date().toISOString().substring(0, 10),
-      }
+      await yahooFinance.historical(
+        req.params.ticker, 
+        {
+          from: req.params.from,
+          to: new Date().toISOString().substring(0, 10),
+        }
     )
   )
 })
@@ -48,6 +46,7 @@ app.get('/api/exchrates/timeseries/:start_date/:end_date', async (req, res) => {
 
 app.get('/api/bloomberg/timeseries/:exchange/:stock', async (req, res) => {
   let base = "https://www.bloomberg.com/markets/api";
+  console.log(`${base}/bulk-time-series/price/${req.params.stock}:${req.params.exchange}?timeFrame=1_DAY`)
 
   return res.send(
       await fetch(
