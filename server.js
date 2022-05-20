@@ -21,8 +21,8 @@ app.get('/api/yf/historical/:ticker/:from', async (req, res) => {
       await yahooFinance.historical(
         req.params.ticker, 
         {
-          from: req.params.from,
-          to: new Date().toISOString().substring(0, 10),
+          period1: req.params.from,
+          period2: new Date().toISOString().substring(0, 10),
         }
     )
   )
